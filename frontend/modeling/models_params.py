@@ -10,13 +10,3 @@ COLONNES_NUM = [
 ]
 COLONNES_CAT = ['multiplexe', 'zone_de_la_commune']
 TARGET = 'ae'
-
-ARBRE_PARAMS = {"max_depth": 4, "random_state": 42}
-FORET_PARAMS = {"n_estimators": 100, "random_state": 42}
-
-ZONES_LABELS = {
-    "B": "B - Banlieue",
-    "C": "C - Centre-ville",
-    "I": "I - Intermediaire",
-    "R": "R - Rural",
-}
