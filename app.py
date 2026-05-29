@@ -1,5 +1,7 @@
 import streamlit as st
 import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 from frontend.modeling.training import entrainer_modeles
 from frontend.processing.data_manager import charger_donnees
@@ -93,12 +95,33 @@ if page == "Prédiction":
 
 elif page == "Statistiques descriptives":
 
-    # Quelques chiffres clés
-    st.subheader("Vue d'ensemble")
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Total cinémas", len(df_cinema))
-    col2.metric("Art & Essai", f"{(df_cinema['ae'] == 'OUI').mean():.0%}")
-    col3.metric("Multiplexes", f"{(df_cinema['multiplexe'] == 'OUI').mean():.0%}")
+    # Qualite des donnees
+    st.subheader("Qualité des données")
+    st.caption("Données officielles du CNC, mises à jour automatiquement via l'API data.culture.gouv.fr.")
+
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("Cinémas", len(df_cinema))
+    col2.metric("Variables", df_cinema.shape[1])
+    col3.metric("Art & Essai", f"{(df_cinema['ae'] == 'OUI').mean():.0%}")
+    col4.metric("Non Art & Essai", f"{(df_cinema['ae'] == 'NON').mean():.0%}")
+
+    # Top 5 colonnes avec le plus de valeurs manquantes
+    manquantes = df_cinema.isnull().sum().sort_values(ascending=False).head(5)
+    manquantes = manquantes[manquantes > 0]
+    if len(manquantes) > 0:
+        st.markdown("**Valeurs manquantes principales :**")
+        tableau_manquantes = pd.DataFrame({
+            'Colonne': manquantes.index,
+            'Nb manquantes': manquantes.values,
+            '% du total': (manquantes.values / len(df_cinema) * 100).round(1),
+        })
+        st.dataframe(tableau_manquantes, hide_index=True, use_container_width=True)
+        st.caption(
+            "Les colonnes très incomplètes (programmateur, label_art_et_essai) "
+
+        )
+
+    st.divider()
 
     # Tableau récap par zone
     st.subheader("Répartition des cinémas par zone")
@@ -108,7 +131,7 @@ elif page == "Statistiques descriptives":
     st.subheader("Part de marché moyenne par profil")
     st.caption("Comparaison des parts de marché entre les cinémas Art & Essai et les autres.")
 
-    # On separe les cinemas en 2 groupes
+
     cinemas_ae = df_cinema[df_cinema['ae'] == 'OUI']
     cinemas_non_ae = df_cinema[df_cinema['ae'] == 'NON']
 
@@ -129,7 +152,7 @@ elif page == "Statistiques descriptives":
     
     st.bar_chart(moyennes, color=["#e94560", "#d4af37"])
 
-    # Stats descriptives 
+    # Stats descriptives
     st.subheader("Statistiques des variables numériques")
     colonnes_num = [
         'pdm_en_entrees_des_films_francais',
@@ -142,3 +165,39 @@ elif page == "Statistiques descriptives":
         'population_de_la_commune',
     ]
     st.dataframe(df_cinema[colonnes_num].describe().round(1), use_container_width=True)
+
+    # Heatmap des correlations entre variables numeriques
+    st.subheader("Corrélations entre variables")
+    st.caption("Plus la couleur est foncée, plus les 2 variables varient ensemble (1 = lien parfait, 0 = aucun lien).")
+
+    st.markdown(
+        "**Ce que la heatmap nous apprend :**\n"
+        "- Les **grands cinémas (multiplexes)** programment plus de films américains et moins de français. "
+        "Les **petits cinémas** font l'inverse.\n"
+        "- **Population** : on pourrait penser qu'une grosse ville = gros cinéma, mais le lien est faible."
+    )
+
+    # Noms plus courts pour que le graphique soit lisible
+    noms_courts = {
+        'pdm_en_entrees_des_films_francais': 'PdM français',
+        'pdm_en_entrees_des_films_americains': 'PdM américains',
+        'pdm_en_entrees_des_films_europeens': 'PdM européens',
+        'nombre_de_films_programmes': 'Nb films',
+        'nombre_de_films_inedits': 'Nb inédits',
+        'ecrans': 'Écrans',
+        'fauteuils': 'Fauteuils',
+        'population_de_la_commune': 'Population',
+    }
+    corr = df_cinema[colonnes_num].rename(columns=noms_courts).corr()
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+    sns.heatmap(corr, annot=True, fmt=".2f", cmap="RdYlBu_r", center=0, ax=ax)
+    st.pyplot(fig)
+
+    st.success(
+        "**Conclusion — le cinéma Art & Essai typique ressemblerait à :**\n"
+        "- Petit (peu d'écrans, peu de fauteuils)\n"
+        "- Forte PdM française\n"
+        "- Faible PdM américaine\n"
+        "- Programme peut-être moins de films au total"
+    )
