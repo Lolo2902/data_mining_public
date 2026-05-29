@@ -1,7 +1,5 @@
 # Projet Data Mining — Cinémas Art & Essai 🎬
 
-Petit projet réalisé dans le cadre de mes études.
-
 **App en ligne :** https://dataminingpublic-jywx2bjcrkdentlt49bbtc.streamlit.app/
 
 ## L'idée
